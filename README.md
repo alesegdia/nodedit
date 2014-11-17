@@ -12,7 +12,7 @@
 * Port from Vala to C++
 * Pluggable links support
 
-## Node hierarchy
+## Node types 
 
 ### Primitive values
 
