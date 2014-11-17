@@ -12,7 +12,7 @@
 * Port from Vala to C++
 * Pluggable links support
 
-## Node types 
+## Node types
 
 ### Primitive values
 
@@ -22,12 +22,11 @@
 	* ~~RGB~~
 	* Scalar
 
-### Image generator
-* Color (RGBA)
-* Perlin (Scalar)
 
 ### Operation
 * Colorize heights :: ImageScalar -> ImageRGBA)
 * Blur :: ImageRGBA -> ImageRGBA
 * AddIrgba :: ImageRGBA -> Vec3 -> ImageRGBA
 * AddIsca :: ImageScalar -> Vec3 -> ImageRGBA
+* GenColor :: void -> ImageRGBA
+* GenPerlin :: void -> ImageScalar
