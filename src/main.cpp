@@ -23,7 +23,7 @@ const int NODE_TITLE_Y_OFFSET = -5;
 const int INOUTS_FONT_SIZE = 12;
 const int INOUTS_X_OFFSET = 5;
 const int INOUTS_Y_OFFSET = 17;
-const int INOUTS_Y_SPACING = 20;
+const int INOUTS_Y_SPACING = 10;
 
 struct Connection
 {
@@ -42,7 +42,8 @@ public:
 
 	void ConfigHeight()
 	{
-		r.h = std::max(ins.size(), outs.size() * 15 + 50);
+		printf("%d\n", ins.size());
+		r.h = std::max(ins.size() * 15 + 60, outs.size() * 15 + 60);
 	}
 
 	Node( float x, float y, float w, float h, const std::string& pretty_ )
@@ -55,6 +56,7 @@ public:
 		c.name = name;
 		c.offx = -5;
 		c.offy = INOUTS_Y_OFFSET - 7 + INOUTS_Y_SPACING * ins.size();
+		ins.push_back(c);
 	}
 
 	void AddOutput( std::string name )
@@ -64,6 +66,7 @@ public:
 		c.name = name;
 		c.offx = r.w;
 		c.offy = INOUTS_Y_OFFSET - 7 + INOUTS_Y_SPACING * outs.size();
+		outs.push_back(c);
 	}
 
 	const std::string& String()
@@ -76,14 +79,15 @@ public:
 class Link
 {
 public:
-	Link(Node ni, Node no, int ii, int io)
+	Link(Node* ni, Node* no, int ii, int io)
 		: node_in(ni), node_out(no), index_in(ii), index_out(io) {}
-	Node node_in, node_out;
+	Node *node_in, *node_out;
 	int index_in, index_out;
 };
 
 
-class NodeFactory {
+class NodeFactory
+{
 private:
 	std::vector<Node*> nodes;
 
@@ -95,10 +99,25 @@ public:
 			delete nodes[i];
 		}
 	}
+	std::vector<Node*>& NodeList()
+	{
+		return nodes;
+	}
 	Node* CreateDumbNode( int x, int y )
 	{
-		Node* n = NULL;
+		Node* n = new Node( x, y, 120, 100, "DumbNode" );
 		nodes.push_back(n);
+		n->AddInput("in1");
+		n->AddInput("in2");
+		n->AddInput("in3");
+		n->AddInput("in4");
+		n->AddInput("in5");
+		n->AddInput("in6");
+		n->AddOutput("out1");
+		n->AddOutput("out2");
+		n->AddOutput("out3");
+		n->AddOutput("out4");
+		n->ConfigHeight();
 		return n;
 	}
 };
@@ -109,8 +128,8 @@ public:
 class DrawX : public Fl_Widget {
 
 private:
+	NodeFactory nf;
 	enum SelectionState { NODE, LINK } selection_state;
-	std::vector<Node> nodes;
 	std::vector<Link> links;
 	bool clicked;
 	float offx, offy, prevx, prevy;
@@ -118,17 +137,137 @@ private:
 	int selected_in, dropped_out;
 
 
+	int onDrag()
+	{
+		int x = Fl::event_x();
+		int y = Fl::event_y();
+
+		if( !clicked )
+		{
+			bool got_one = false;
+			for( int i = 0; i < nf.NodeList().size(); i++ )
+			{
+				if(nf.NodeList()[i]->r.contains_point( x - offx, y - offy ))
+				{
+					got_one = true;
+					selected = nf.NodeList()[i];
+					prevx = x - selected->r.x;
+					prevy = y - selected->r.y;
+				}
+			}
+			if( !got_one )
+			{
+				selected = NULL;
+				prevx = x - offx;
+				prevy = y - offy;
+			}
+			clicked = true;
+		}
+
+		if( selected == NULL )
+		{
+			offx = x - prevx;
+			offy = y - prevy;
+		}
+		else
+		{
+			selected->r.x = x - prevx;
+			selected->r.y = y - prevy;
+		}
+
+		redraw();
+		return 0;
+	}
+
+	int onRelease()
+	{
+		clicked = false;
+		return 0;
+	}
+
+
 public:
-    DrawX(int X, int Y, int W, int H, const char*L=0) : Fl_Widget(X,Y,W,H,L) {
+    DrawX(int X, int Y, int W, int H, const char*L=0) : Fl_Widget(X,Y,W,H,L)
+    {
+    	selected = NULL;
+    	offx = offy = 0;
+    	Node* n1 = nf.CreateDumbNode(100,100);
+    	Node* n2 = nf.CreateDumbNode(400,100);
+		links.push_back(Link(n1,n2,1,1));
+		links.push_back(Link(n1,n2,2,2));
+		links.push_back(Link(n1,n2,4,6));
+		links.push_back(Link(n1,n2,3,4));
     }
+
+
+    int handle(int event)
+	{
+		switch(event)
+		{
+		case FL_DRAG: return onDrag(); break;
+		case FL_RELEASE: return onRelease(); break;
+		}
+	}
     void draw() {
         // DRAW BLACK 'X'
         fl_color(FL_BLACK);
-        int x1 = x(),       y1 = y();
-        int x2 = x()+w()-1, y2 = y()+h()-1;
-        fl_line(x1, y1, x2, y2);
-        fl_line(x1, y2, x2, y1);
+        fl_rectf(0,0,w(),h());
+
+		for( int i = 0; i < links.size(); i++ )
+		{
+			printf("qwe\n");
+			Node* src = links[i].node_in;
+			Node* dst = links[i].node_out;
+			float x0, y0, x1, y1;
+			x0 = src->r.x + offx + src->r.w + 2.5; y0 = INOUTS_Y_OFFSET + src->r.y + offy + (links[i].index_in*2 -1 +0.2) * INOUTS_Y_SPACING;
+			x1 = dst->r.x + offx - 2.5;            y1 = INOUTS_Y_OFFSET + dst->r.y + offy + (links[i].index_out*2 -1 +0.2) * INOUTS_Y_SPACING;
+			fl_color(255,0,255);
+			//fl_curve( x0, y0, x0, y0, x1, y1, x1, y1 );
+			fl_line( x0, y0, x1, y1 );
+		}
+
+
+		std::vector<Node*>& nodes = nf.NodeList();
+        for( int i = 0; i < nodes.size(); i++ )
+		{
+			Node* n = nodes[i];
+			float nx = n->r.x + offx;
+			float ny = n->r.y + offy;
+			//fl_rectf( nx+5, ny-5, n->r.w, n->r.h);
+			//fl_rectf( nx, ny, n->r.w, n->r.h, FL_RED);
+			fl_color(128, 0, 0);
+			fl_draw_box( FL_RFLAT_BOX, nx+5, ny-5, n->r.w, n->r.h, FL_DARK_RED);
+			fl_draw_box( FL_RFLAT_BOX, nx, ny, n->r.w, n->r.h, FL_RED);
+			for( int i = 0; i < n->ins.size(); i++ )
+			{
+				Connection input = n->ins[i];
+				float x = INOUTS_X_OFFSET + nx + input.offx - 5;
+				float y = INOUTS_Y_OFFSET + ny + INOUTS_Y_SPACING * i + input.offy;
+				fl_rectf(x,y,5,5,FL_BLUE);
+				fl_color(FL_YELLOW);
+				fl_draw(input.name.c_str(), x+10, y+6);
+			}
+			for( int i = 0; i < n->outs.size(); i++ )
+			{
+				Connection output = n->outs[i];
+				int wext, hext;
+				textExtents( output.name.c_str(), wext, hext );
+				float x = nx + n->r.w - INOUTS_X_OFFSET;
+				float y = INOUTS_Y_OFFSET + ny + INOUTS_Y_SPACING * i + output.offy;
+				fl_rectf(x+5,y,5,5,FL_BLUE);
+				fl_color(FL_YELLOW);
+				fl_draw(output.name.c_str(), x - wext, y+6);
+			}
+		}
+
     }
+
+    int textExtents( const char* text, int& w, int& h )
+	{
+		int dx, dy;
+		fl_text_extents(text, dx, dy, w, h);
+		printf("%d, %d, %d, %d\n", dx, dy, w, h);
+	}
 };
 int main() {
     Fl_Double_Window win(200,200,"Draw X");
