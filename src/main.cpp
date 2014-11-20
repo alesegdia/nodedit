@@ -226,12 +226,8 @@ private:
 				const int s = 40;
 				for( int j = 0; j < n->ins.size(); j++ )
 				{
-					Rect r = n->GetInRect(j,10);
-					r.x += offx;
-					r.y += offy;
-					printf("in %d: %f, %f, %f, %f\n", j, r.x, r.y, r.w, r.h);
-					fflush(0);
-					if( r.contains_point( x + offx, y + offy ) )
+					Rect r = n->GetInRect(j,40);
+					if( r.contains_point( x - offx, y - offy ) )
 					{
 						got_one = true;
 						printf("EUREKA!");
@@ -242,12 +238,8 @@ private:
 				}
 				for( int j = 0; j < n->outs.size(); j++ )
 				{
-					Rect r = n->GetOutRect(j,10);
-					r.x += offx;
-					r.y += offy;
-					printf("out %d: %f, %f, %f, %f\n", j, r.x, r.y, r.w, r.h);
-					fflush(0);
-					if( r.contains_point( x + offx, y + offy ) )
+					Rect r = n->GetOutRect(j,40);
+					if( r.contains_point( x - offx, y - offy ) )
 					{
 						got_one = true;
 						selected = nf.NodeList()[i];
