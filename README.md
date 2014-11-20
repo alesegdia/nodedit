@@ -6,6 +6,10 @@
 * FLTK
 
 # TODO
+* TODO to issues
+* Connection + Link => Link
+* Add ptr to connected connected node on Link to apply logic later
+* Links are in a list to draw them, and in each node, to apply logic later
 
 ## Application
 

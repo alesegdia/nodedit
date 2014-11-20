@@ -18,12 +18,19 @@ struct Rect {
 	}
 };
 
+int textExtents( const char* text, int& w, int& h )
+{
+	int dx, dy;
+	fl_text_extents(text, dx, dy, w, h);
+}
+
 const int NODE_TITLE_FONT_SIZE = 14;
 const int NODE_TITLE_Y_OFFSET = -5;
 const int INOUTS_FONT_SIZE = 12;
 const int INOUTS_X_OFFSET = 5;
 const int INOUTS_Y_OFFSET = 17;
 const int INOUTS_Y_SPACING = 10;
+const int INOUTS_SIZE = 5;
 
 struct Connection
 {
@@ -42,7 +49,6 @@ public:
 
 	void ConfigHeight()
 	{
-		printf("%d\n", ins.size());
 		r.h = std::max(ins.size() * 15 + 60, outs.size() * 15 + 60);
 	}
 
@@ -67,6 +73,70 @@ public:
 		c.offx = r.w;
 		c.offy = INOUTS_Y_OFFSET - 7 + INOUTS_Y_SPACING * outs.size();
 		outs.push_back(c);
+	}
+
+
+	void RenderNode(float offx, float offy)
+	{
+		float nx = r.x + offx;
+		float ny = r.y + offy;
+		//fl_rectf( nx+5, ny-5, n->r.w, n->r.h);
+		//fl_rectf( nx, ny, n->r.w, n->r.h, FL_RED);
+		fl_color(128, 0, 0);
+		fl_draw_box( FL_RFLAT_BOX, nx+5, ny-5, r.w, r.h, FL_DARK_RED);
+		fl_draw_box( FL_RFLAT_BOX, nx, ny, r.w, r.h, FL_RED);
+
+		for( int i = 0; i < ins.size(); i++ )
+		{
+			RenderIn(i, offx, offy);
+		}
+		for( int i = 0; i < outs.size(); i++ )
+		{
+			RenderOut( i, offx, offy );
+		}
+	}
+
+	void RenderOut( int index, float offx, float offy )
+	{
+		Connection output = outs[index];
+		int wext, hext;
+		textExtents( output.name.c_str(), wext, hext );
+		Rect rc = GetOutRect( index );
+		fl_rectf( rc.x + offx, rc.y + offy, rc.w, rc.h, FL_BLUE );
+		fl_color(FL_YELLOW);
+		fl_draw(output.name.c_str(), rc.x - wext + offx, rc.y + 6 + offy);
+	}
+	void RenderIn( int index, float offx, float offy )
+	{
+		Connection output = ins[index];
+		Rect rc = GetInRect( index );
+		fl_rectf( rc.x + offx, rc.y + offy, rc.w, rc.h, FL_BLUE );
+		fl_color(FL_YELLOW);
+		fl_draw(output.name.c_str(), offx + rc.x + 10, offy + rc.y + 6);
+	}
+
+	Rect GetOutRect( int index, int k = 0 )
+	{
+		// check index valid?
+		Connection o = outs[index];
+		float hk = float(k) / 2.f;
+		return Rect(
+			r.x + INOUTS_X_OFFSET + o.offx - 5 - hk,
+			r.y + INOUTS_Y_OFFSET + INOUTS_Y_SPACING * index + o.offy - hk,
+			INOUTS_SIZE + k, INOUTS_SIZE + k
+		);
+	}
+
+	Rect GetInRect( int index, int k = 0 )
+	{
+		// check index valid?
+		Connection o = ins[index];
+		float hk = float(k) / 2.f;
+		return Rect(
+			r.x + INOUTS_X_OFFSET + o.offx - 5 - hk,
+			r.y + INOUTS_Y_OFFSET + INOUTS_Y_SPACING * index + o.offy - hk,
+			INOUTS_SIZE + k, INOUTS_SIZE + k
+		);
 	}
 
 	const std::string& String()
@@ -108,15 +178,17 @@ public:
 		Node* n = new Node( x, y, 120, 100, "DumbNode" );
 		nodes.push_back(n);
 		n->AddInput("in1");
+		/*
 		n->AddInput("in2");
 		n->AddInput("in3");
 		n->AddInput("in4");
 		n->AddInput("in5");
 		n->AddInput("in6");
-		n->AddOutput("out1");
 		n->AddOutput("out2");
 		n->AddOutput("out3");
 		n->AddOutput("out4");
+		*/
+		n->AddOutput("out1");
 		n->ConfigHeight();
 		return n;
 	}
@@ -134,6 +206,7 @@ private:
 	bool clicked;
 	float offx, offy, prevx, prevy;
 	Node* selected;
+	Link* selectedLink;
 	int selected_in, dropped_out;
 
 
@@ -147,7 +220,43 @@ private:
 			bool got_one = false;
 			for( int i = 0; i < nf.NodeList().size(); i++ )
 			{
-				if(nf.NodeList()[i]->r.contains_point( x - offx, y - offy ))
+				Node* n = nf.NodeList()[i];
+				float nx = n->r.x + offx;
+				float ny = n->r.y + offy;
+				const int s = 40;
+				for( int j = 0; j < n->ins.size(); j++ )
+				{
+					Rect r = n->GetInRect(j,10);
+					r.x += offx;
+					r.y += offy;
+					printf("in %d: %f, %f, %f, %f\n", j, r.x, r.y, r.w, r.h);
+					fflush(0);
+					if( r.contains_point( x + offx, y + offy ) )
+					{
+						got_one = true;
+						printf("EUREKA!");
+						selected = nf.NodeList()[i];
+						prevx = x - selected->r.x;
+						prevy = y - selected->r.y;
+					}
+				}
+				for( int j = 0; j < n->outs.size(); j++ )
+				{
+					Rect r = n->GetOutRect(j,10);
+					r.x += offx;
+					r.y += offy;
+					printf("out %d: %f, %f, %f, %f\n", j, r.x, r.y, r.w, r.h);
+					fflush(0);
+					if( r.contains_point( x + offx, y + offy ) )
+					{
+						got_one = true;
+						selected = nf.NodeList()[i];
+						prevx = x - selected->r.x;
+						prevy = y - selected->r.y;
+						printf("EUREKA!");
+					}
+				}
+				if(!got_one && nf.NodeList()[i]->r.contains_point( x - offx, y - offy ))
 				{
 					got_one = true;
 					selected = nf.NodeList()[i];
@@ -191,12 +300,12 @@ public:
     {
     	selected = NULL;
     	offx = offy = 0;
-    	Node* n1 = nf.CreateDumbNode(100,100);
+    	Node* n1 = nf.CreateDumbNode(0,100);
     	Node* n2 = nf.CreateDumbNode(400,100);
 		links.push_back(Link(n1,n2,1,1));
-		links.push_back(Link(n1,n2,2,2));
-		links.push_back(Link(n1,n2,4,6));
-		links.push_back(Link(n1,n2,3,4));
+		//links.push_back(Link(n1,n2,2,2));
+		//links.push_back(Link(n1,n2,4,6));
+		//links.push_back(Link(n1,n2,3,4));
     }
 
 
@@ -215,59 +324,24 @@ public:
 
 		for( int i = 0; i < links.size(); i++ )
 		{
-			printf("qwe\n");
 			Node* src = links[i].node_in;
 			Node* dst = links[i].node_out;
 			float x0, y0, x1, y1;
 			x0 = src->r.x + offx + src->r.w + 2.5; y0 = INOUTS_Y_OFFSET + src->r.y + offy + (links[i].index_in*2 -1 +0.2) * INOUTS_Y_SPACING;
 			x1 = dst->r.x + offx - 2.5;            y1 = INOUTS_Y_OFFSET + dst->r.y + offy + (links[i].index_out*2 -1 +0.2) * INOUTS_Y_SPACING;
 			fl_color(255,0,255);
-			//fl_curve( x0, y0, x0, y0, x1, y1, x1, y1 );
 			fl_line( x0, y0, x1, y1 );
 		}
-
 
 		std::vector<Node*>& nodes = nf.NodeList();
         for( int i = 0; i < nodes.size(); i++ )
 		{
 			Node* n = nodes[i];
-			float nx = n->r.x + offx;
-			float ny = n->r.y + offy;
-			//fl_rectf( nx+5, ny-5, n->r.w, n->r.h);
-			//fl_rectf( nx, ny, n->r.w, n->r.h, FL_RED);
-			fl_color(128, 0, 0);
-			fl_draw_box( FL_RFLAT_BOX, nx+5, ny-5, n->r.w, n->r.h, FL_DARK_RED);
-			fl_draw_box( FL_RFLAT_BOX, nx, ny, n->r.w, n->r.h, FL_RED);
-			for( int i = 0; i < n->ins.size(); i++ )
-			{
-				Connection input = n->ins[i];
-				float x = INOUTS_X_OFFSET + nx + input.offx - 5;
-				float y = INOUTS_Y_OFFSET + ny + INOUTS_Y_SPACING * i + input.offy;
-				fl_rectf(x,y,5,5,FL_BLUE);
-				fl_color(FL_YELLOW);
-				fl_draw(input.name.c_str(), x+10, y+6);
-			}
-			for( int i = 0; i < n->outs.size(); i++ )
-			{
-				Connection output = n->outs[i];
-				int wext, hext;
-				textExtents( output.name.c_str(), wext, hext );
-				float x = nx + n->r.w - INOUTS_X_OFFSET;
-				float y = INOUTS_Y_OFFSET + ny + INOUTS_Y_SPACING * i + output.offy;
-				fl_rectf(x+5,y,5,5,FL_BLUE);
-				fl_color(FL_YELLOW);
-				fl_draw(output.name.c_str(), x - wext, y+6);
-			}
+			n->RenderNode(offx,offy);
 		}
 
     }
 
-    int textExtents( const char* text, int& w, int& h )
-	{
-		int dx, dy;
-		fl_text_extents(text, dx, dy, w, h);
-		printf("%d, %d, %d, %d\n", dx, dy, w, h);
-	}
 };
 int main() {
     Fl_Double_Window win(200,200,"Draw X");
