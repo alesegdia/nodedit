@@ -4,7 +4,7 @@
 #include "node.h"
 
 // SIMPLE WIDGET THAT DRAWS AN 'X'
-class DrawX : public Fl_Widget {
+class NodeEditor : public Fl_Widget {
 
 private:
 	NodeFactory nf;
@@ -95,7 +95,7 @@ private:
 
 
 public:
-    DrawX(int X, int Y, int W, int H, const char*L=0) : Fl_Widget(X,Y,W,H,L)
+    NodeEditor(int X, int Y, int W, int H, const char*L=0) : Fl_Widget(X,Y,W,H,L)
     {
     	selected = NULL;
     	offx = offy = 0;
