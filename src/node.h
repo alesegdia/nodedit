@@ -1,4 +1,6 @@
 
+#pragma once
+
 #include <FL/Fl.H>
 #include <FL/fl_draw.H>
 #include <FL/Fl_Double_Window.H>
