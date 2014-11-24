@@ -8,6 +8,8 @@
 #include <string>
 #include <algorithm>
 
+#include "globals.h"
+
 struct Rect {
 	float x, y, w, h;
 	Rect( float x_, float y_, float w_, float h_ ) { x=x_;y=y_;w=w_;h=h_; }
@@ -23,14 +25,6 @@ int textExtents( const char* text, int& w, int& h )
 	int dx, dy;
 	fl_text_extents(text, dx, dy, w, h);
 }
-
-const int NODE_TITLE_FONT_SIZE = 14;
-const int NODE_TITLE_Y_OFFSET = -5;
-const int INOUTS_FONT_SIZE = 12;
-const int INOUTS_X_OFFSET = 5;
-const int INOUTS_Y_OFFSET = 17;
-const int INOUTS_Y_SPACING = 10;
-const int INOUTS_SIZE = 5;
 
 class Node;
 
